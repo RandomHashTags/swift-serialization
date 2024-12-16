@@ -10,10 +10,10 @@ import SwiftSyntaxMacros
 
 enum ProtocolBuffer : MemberMacro {
     static func expansion(of node: AttributeSyntax, providingMembersOf declaration: some DeclGroupSyntax, in context: some MacroExpansionContext) throws -> [DeclSyntax] {
-        var values:String = "static let values:[(String, SerializationTechnique.Protobuf.DataType)] = ["
+        var values:String = "static let protobufContent:[(String, SerializationTechnique.Protobuf.DataType)] = ["
         var initializer:String = "init() {"
-        var getVariable:String = "func value(forKey key: String) -> Any? {\nswitch key {\n"
-        var setVariable:String = "mutating func setValue(forKey key: String, value: Any) {\nswitch key {\n"
+        var getVariable:String = "func protobufValue(forKey key: String) -> Any? {\nswitch key {\n"
+        var setVariable:String = "mutating func setProtobufValue(forKey key: String, value: Any) {\nswitch key {\n"
         if let arguments:SyntaxChildren = node.arguments?.children(viewMode: .all) {
             for argument in arguments {
                 if let labeled:LabeledExprSyntax = argument.as(LabeledExprSyntax.self) {

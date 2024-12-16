@@ -13,9 +13,9 @@ import Testing
 struct ProtobufTests {
     @Test func protobuf() {
         let example1:ProtobufExample1 = ProtobufExample1(id: 9, name: "HOOPLA", isTrue: true)
-        let data:[UInt8] = example1.serialize()
+        let data:[UInt8] = example1.serializeProtobuf()
 
-        let result:ProtobufExample1 = ProtobufExample1.deserialize(data: data)
+        let result:ProtobufExample1 = ProtobufExample1.deserializeProtobuf(data: data)
         #expect(example1 == result)
         //print("protobuf;example1;serialized=\([UInt8](data))")
     }

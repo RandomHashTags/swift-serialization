@@ -80,26 +80,26 @@ public extension SerializationTechnique {
 
 // MARK: ProtobufProtocol
 public protocol ProtobufProtocol {
-    static var values : [(String, SerializationTechnique.Protobuf.DataType)] { get }
+    static var protobufContent : [(String, SerializationTechnique.Protobuf.DataType)] { get }
 
     init()
 
-    func value(forKey key: String) -> Any?
-    mutating func setValue(forKey key: String, value: Any)
+    func protobufValue(forKey key: String) -> Any?
+    mutating func setProtobufValue(forKey key: String, value: Any)
 
-    func serialize(reserveCapacity: Int) -> [UInt8]
-    static func deserialize(data: [UInt8]) -> Self
+    func serializeProtobuf(reserveCapacity: Int) -> [UInt8]
+    static func deserializeProtobuf(data: [UInt8]) -> Self
 }
 
 // MARK: Serialize
 public extension ProtobufProtocol {
     @inlinable
-    func serialize(reserveCapacity: Int = 1024) -> [UInt8] {
+    func serializeProtobuf(reserveCapacity: Int = 1024) -> [UInt8] {
         var data:[UInt8] = []
         data.reserveCapacity(reserveCapacity)
-        for (index, (key, dataType)) in Self.values.enumerated() {
+        for (index, (key, dataType)) in Self.protobufContent.enumerated() {
             SerializationTechnique.Protobuf.encodeFieldTag(number: index+1, wireType: .varint, into: &data)
-            if let value:Any = value(forKey: key) {
+            if let value:Any = protobufValue(forKey: key) {
                 switch dataType {
                     case .bool:   SerializationTechnique.Protobuf.encodeBool(value as! Bool, into: &data)
                     case .int32:  SerializationTechnique.Protobuf.encodeInt32(value as! Int32, into: &data)
@@ -169,16 +169,16 @@ extension SerializationTechnique.Protobuf {
 
 // MARK: Deserialize
 public extension ProtobufProtocol {
-    static func deserialize(data: [UInt8]) -> Self {
+    static func deserializeProtobuf(data: [UInt8]) -> Self {
         var value:Self = Self()
         var index:Int = 0
         while index < data.count {
             guard let (number, wireType):(Int, SerializationTechnique.Protobuf.WireType) = SerializationTechnique.Protobuf.decodeFieldTag(index: &index, data: data) else {
                 break
             }
-            let (key, dataType):(String, SerializationTechnique.Protobuf.DataType) = values[number-1]
+            let (key, dataType):(String, SerializationTechnique.Protobuf.DataType) = protobufContent[number-1]
             if let decoded:Any = wireType.decode(dataType: dataType, index: &index, data: data) {
-                value.setValue(forKey: key, value: decoded)
+                value.setProtobufValue(forKey: key, value: decoded)
             }
         }
         return value
