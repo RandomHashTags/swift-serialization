@@ -6,7 +6,7 @@
 //
 
 public enum SerializationTechnique {
-    case json(variant: JSONVariant = .native)
+    case json(variant: JSONVariant = .native, pretty: Bool = false)
     case protobuf
     case xml
     case yaml

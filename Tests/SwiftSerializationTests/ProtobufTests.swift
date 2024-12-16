@@ -26,7 +26,7 @@ struct ProtobufTests {
     "name" : .string,
     "isTrue" : .bool
 ])
-struct ProtobufExample1 : Hashable, ProtobufProtocol {
+struct ProtobufExample1 : Hashable {
     var id:Int32
     var name:String
     var isTrue:Bool
