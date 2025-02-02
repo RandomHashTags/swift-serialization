@@ -10,8 +10,6 @@ import Testing
 @testable import SwiftSerialization
 
 struct SwiftSerializationTests {
-    @Test func example() {
-    }
 }
 
 #endif

@@ -11,16 +11,16 @@ public macro ProtocolBuffer(
     content: [String:SerializationTechnique.Protobuf.DataType]
 ) = #externalMacro(module: "SwiftSerializationMacros", type: "ProtocolBuffer")
 
-public extension Encodable {
+extension Encodable {
     @inlinable
-    func serialize(using technique: SerializationTechnique) -> [UInt8] {
+    public func serialize(using technique: SerializationTechnique) -> [UInt8] {
         return []
     }
 }
 
-public extension Decodable {
+extension Decodable {
     @inlinable
-    func deserialize(using technique: SerializationTechnique) -> [UInt8] {
+    public func deserialize(using technique: SerializationTechnique) -> [UInt8] {
         return []
     }
 }

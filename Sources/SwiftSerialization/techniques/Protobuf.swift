@@ -10,8 +10,8 @@ import Foundation
 #endif
 
 // MARK: Protobuf
-public extension SerializationTechnique {
-    enum Protobuf {
+extension SerializationTechnique {
+    public enum Protobuf {
         public enum WireType : Int {
             case varint
             case i64
@@ -21,32 +21,36 @@ public extension SerializationTechnique {
             case i32
 
             @inlinable
-            func decode(dataType: DataType, index: inout Int, data: [UInt8]) -> Any? {
+            func decode<C: Collection<UInt8>>(dataType: DataType, index: inout C.Index, data: C) -> Any? {
                 switch self {
-                    case .varint:
-                        switch dataType {
-                            case .bool:   return decodeBool(index: &index, data: data)
-                            case .int32:  return decodeInt32(index: &index, data: data)
-                            case .int64:  return decodeInt64(index: &index, data: data)
-                            case .string: return decodeString(index: &index, data: data)
-                            case .uint32: return decodeUInt32(index: &index, data: data)
-                            case .uint64: return decodeUInt64(index: &index, data: data)
-                            default:      return nil
-                        }
+                case .varint:
+                    switch dataType {
+                    case .bool:   return decodeBool(index: &index, data: data)
+                    case .int32:  return decodeInt32(index: &index, data: data)
+                    case .int64:  return decodeInt64(index: &index, data: data)
+                    case .uint32: return decodeUInt32(index: &index, data: data)
+                    case .uint64: return decodeUInt64(index: &index, data: data)
+                    default:      return nil
+                    }
+                case .len:
+                    switch dataType {
+                    case .string: return decodeString(index: &index, data: data)
                     default: return nil
+                    }
+                default: return nil
                 }
             }
 
             @inlinable
             func skip(index: inout Int, data: [UInt8]) {
                 switch self {
-                    case .varint: index += Int(decodeVarInt(index: &index, data: data))
-                    case .i64:    index += 8
-                    case .len:
-                        let length:Int = Int(decodeVarInt(index: &index, data: data))
-                        index += length
-                    case .i32:    index += 4
-                    default: break
+                case .varint: index += Int(decodeVarInt(index: &index, data: data))
+                case .i64:    index += 8
+                case .len:
+                    let length:Int = Int(decodeVarInt(index: &index, data: data))
+                    index += length
+                case .i32:    index += 4
+                default: break
                 }
             }
         }
@@ -92,23 +96,25 @@ public protocol ProtobufProtocol {
 }
 
 // MARK: Serialize
-public extension ProtobufProtocol {
+extension ProtobufProtocol {
     @inlinable
-    func serializeProtobuf(reserveCapacity: Int = 1024) -> [UInt8] {
+    public func serializeProtobuf(reserveCapacity: Int = 1024) -> [UInt8] {
         var data:[UInt8] = []
         data.reserveCapacity(reserveCapacity)
         for (index, (key, dataType)) in Self.protobufContent.enumerated() {
-            SerializationTechnique.Protobuf.encodeFieldTag(number: index+1, wireType: .varint, into: &data)
+            let fieldNumber:Int = index+1
             if let value:Any = protobufValue(forKey: key) {
                 switch dataType {
-                    case .bool:   SerializationTechnique.Protobuf.encodeBool(value as! Bool, into: &data)
-                    case .int32:  SerializationTechnique.Protobuf.encodeInt32(value as! Int32, into: &data)
-                    case .int64:  SerializationTechnique.Protobuf.encodeInt64(value as! Int64, into: &data)
-                    case .string: SerializationTechnique.Protobuf.encodeString(value as! String, into: &data)
-                    case .uint32: SerializationTechnique.Protobuf.encodeUInt32(value as! UInt32, into: &data)
-                    case .uint64: SerializationTechnique.Protobuf.encodeUInt64(value as! UInt64, into: &data)
-                    default: break
+                case .bool:   SerializationTechnique.Protobuf.encodeBool(fieldNumber: fieldNumber, value as! Bool, into: &data)
+                case .int32:  SerializationTechnique.Protobuf.encodeInt32(fieldNumber: fieldNumber, value as! Int32, into: &data)
+                case .int64:  SerializationTechnique.Protobuf.encodeInt64(fieldNumber: fieldNumber, value as! Int64, into: &data)
+                case .string: SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, value as! String, into: &data)
+                case .uint32: SerializationTechnique.Protobuf.encodeUInt32(fieldNumber: fieldNumber, value as! UInt32, into: &data)
+                case .uint64: SerializationTechnique.Protobuf.encodeUInt64(fieldNumber: fieldNumber, value as! UInt64, into: &data)
+                default:      SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
                 }
+            } else {
+                SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
             }
         }
         return data
@@ -127,52 +133,56 @@ extension SerializationTechnique.Protobuf {
     }
 
     @inlinable
-    static func encodeFieldTag(number: Int, wireType: SerializationTechnique.Protobuf.WireType, into data: inout [UInt8]) {
-        let tag:Int = (number << 3) | wireType.rawValue
+    static func encodeFieldTag(fieldNumber: Int, wireType: SerializationTechnique.Protobuf.WireType, into data: inout [UInt8]) {
+        let tag:Int = (fieldNumber << 3) | wireType.rawValue
         encodeVarInt(int: tag, into: &data)
     }
 
     @inlinable
-    static func encodeBool(_ bool: Bool, into data: inout [UInt8]) {
+    static func encodeBool(fieldNumber: Int, _ bool: Bool, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
         encodeVarInt(int: bool ? 1 : 0, into: &data)
     }
 
     @inlinable
-    static func encodeInt32(_ int: Int32, into data: inout [UInt8]) {
+    static func encodeInt32(fieldNumber: Int, _ int: Int32, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
         encodeVarInt(int: int, into: &data)
     }
 
     @inlinable
-    static func encodeInt64(_ int: Int64, into data: inout [UInt8]) {
+    static func encodeInt64(fieldNumber: Int, _ int: Int64, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
         encodeVarInt(int: int, into: &data)
     }
 
     @inlinable
-    static func encodeUInt32(_ int: UInt32, into data: inout [UInt8]) {
+    static func encodeUInt32(fieldNumber: Int, _ int: UInt32, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
         encodeVarInt(int: int, into: &data)
     }
     
     @inlinable
-    static func encodeUInt64(_ int: UInt64, into data: inout [UInt8]) {
+    static func encodeUInt64(fieldNumber: Int, _ int: UInt64, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
         encodeVarInt(int: int, into: &data)
     }
 
-    #if canImport(Foundation)
     @inlinable
-    static func encodeString(_ string: String, into data: inout [UInt8]) {
-        guard let utf8:Data = string.data(using: .utf8) else { return }
+    static func encodeString(fieldNumber: Int, _ string: String, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .len, into: &data)
+        let utf8:[UInt8] = [UInt8](string.utf8)
         encodeVarInt(int: utf8.count, into: &data)
         data.append(contentsOf: utf8)
     }
-    #endif
 }
 
 // MARK: Deserialize
-public extension ProtobufProtocol {
-    static func deserializeProtobuf(data: [UInt8]) -> Self {
+extension ProtobufProtocol {
+    public static func deserializeProtobuf<C: Collection<UInt8>>(data: C) -> Self {
         var value:Self = Self()
-        var index:Int = 0
-        while index < data.count {
+        var index:C.Index = data.startIndex
+        while index < data.endIndex {
             guard let (number, wireType):(Int, SerializationTechnique.Protobuf.WireType) = SerializationTechnique.Protobuf.decodeFieldTag(index: &index, data: data) else {
                 break
             }
@@ -187,11 +197,11 @@ public extension ProtobufProtocol {
 
 extension SerializationTechnique.Protobuf {
     @inlinable
-    static func decodeVarInt(index: inout Int, data: [UInt8]) -> UInt64 {
+    static func decodeVarInt<C: Collection<UInt8>>(index: inout C.Index, data: C) -> UInt64 {
         var result:UInt64 = 0, shift:UInt64 = 0
-        while index < data.count {
+        while index < data.endIndex {
             let byte:UInt8 = data[index]
-            index += 1
+            data.formIndex(&index, offsetBy: 1)
             result |= UInt64(byte & 0x7F) << shift
             if (byte & 0x80) == 0 {
                 break
@@ -202,7 +212,7 @@ extension SerializationTechnique.Protobuf {
     }
 
     @inlinable
-    static func decodeFieldTag(index: inout Int, data: [UInt8]) -> (Int, SerializationTechnique.Protobuf.WireType)? {
+    static func decodeFieldTag<C: Collection<UInt8>>(index: inout C.Index, data: C) -> (Int, SerializationTechnique.Protobuf.WireType)? {
         let tag:UInt64 = decodeVarInt(index: &index, data: data)
         let number:Int = Int(tag >> 3)
         guard let wireType:SerializationTechnique.Protobuf.WireType = .init(rawValue: Int(tag & 0x07)) else {
@@ -212,45 +222,43 @@ extension SerializationTechnique.Protobuf {
     }
 
     @inlinable
-    static func decodeLengthDelimited(index: inout Int, data: [UInt8]) -> [UInt8] {
+    static func decodeLengthDelimited<C: Collection<UInt8>>(index: inout C.Index, data: C) -> C.SubSequence {
         let length:Int = Int(decodeVarInt(index: &index, data: data))
-        let bytes:ArraySlice<UInt8> = data[index..<index + length]
-        index += length
-        return [UInt8](bytes)
+        let ends:C.Index = data.index(index, offsetBy: length)
+        defer { index = ends }
+        return data[index..<ends]
     }
 }
 
 extension SerializationTechnique.Protobuf {
-    #if canImport(Foundation)
     @inlinable
-    static func decodeString(index: inout Int, data: [UInt8]) -> String? {
-        let bytes:[UInt8] = decodeLengthDelimited(index: &index, data: data)
-        return String(data: Data(bytes), encoding: .utf8)
+    static func decodeString<C: Collection<UInt8>>(index: inout C.Index, data: C) -> String {
+        let bytes:C.SubSequence = decodeLengthDelimited(index: &index, data: data)
+        return String(decoding: bytes, as: UTF8.self)
     }
-    #endif
 
     @inlinable
-    static func decodeBool(index: inout Int, data: [UInt8]) -> Bool {
+    static func decodeBool<C: Collection<UInt8>>(index: inout C.Index, data: C) -> Bool {
         return Int32(decodeVarInt(index: &index, data: data)) != 0
     }
     
     @inlinable
-    static func decodeInt32(index: inout Int, data: [UInt8]) -> Int32 {
+    static func decodeInt32<C: Collection<UInt8>>(index: inout C.Index, data: C) -> Int32 {
         return Int32(decodeVarInt(index: &index, data: data))
     }
 
     @inlinable
-    static func decodeInt64(index: inout Int, data: [UInt8]) -> Int64 {
+    static func decodeInt64<C: Collection<UInt8>>(index: inout C.Index, data: C) -> Int64 {
         return Int64(decodeVarInt(index: &index, data: data))
     }
 
     @inlinable
-    static func decodeUInt32(index: inout Int, data: [UInt8]) -> UInt32 {
+    static func decodeUInt32<C: Collection<UInt8>>(index: inout C.Index, data: C) -> UInt32 {
         return UInt32(decodeVarInt(index: &index, data: data))
     }
 
     @inlinable
-    static func decodeUInt64(index: inout Int, data: [UInt8]) -> UInt64 {
+    static func decodeUInt64<C: Collection<UInt8>>(index: inout C.Index, data: C) -> UInt64 {
         return decodeVarInt(index: &index, data: data)
     }
 }

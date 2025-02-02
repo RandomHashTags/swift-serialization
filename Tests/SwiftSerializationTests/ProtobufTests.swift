@@ -7,6 +7,12 @@
 
 #if compiler(>=6.0)
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#elseif canImport(Foundation)
+import Foundation
+#endif
+
 import Testing
 @testable import SwiftSerialization
 
@@ -14,6 +20,10 @@ struct ProtobufTests {
     @Test func protobuf() {
         let example1:ProtobufExample1 = ProtobufExample1(id: 9, name: "HOOPLA", isTrue: true)
         let data:[UInt8] = example1.serializeProtobuf()
+
+        #if canImport(FoundationEssentials) || canImport(Foundation)
+        #expect(data.hexadecimal() == "08091206484F4F504C411801")
+        #endif
 
         let result:ProtobufExample1 = ProtobufExample1.deserializeProtobuf(data: data)
         #expect(example1 == result)
