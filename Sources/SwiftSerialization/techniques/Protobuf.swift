@@ -58,17 +58,16 @@ extension SerializationTechnique {
         public struct Value {
             public let fieldNumber:Int
             public let dataType:DataType
-            public let isOptional:Bool
 
-            public init(fieldNumber: Int, optional: Bool = false, dataType: DataType) {
+            public init(fieldNumber: Int, dataType: DataType) {
                 self.fieldNumber = fieldNumber
-                self.isOptional = optional
                 self.dataType = dataType
             }
         }
 
         public enum DataType {
             case any
+            case `nil`
             case bool
             case bytes
             case double
@@ -79,6 +78,7 @@ extension SerializationTechnique {
             case int64
             indirect case map(key: DataType, value: DataType)
             indirect case repeated(DataType)
+            indirect case optional(DataType)
             case reserved(index: Int)
             case reserved(fieldName: String)
             case sfixed32
@@ -86,9 +86,17 @@ extension SerializationTechnique {
             case sint32
             case sint64
             case string
-            case structure(dataTypes: [DataType])
+            case structure([Value])
             case uint32
             case uint64
+
+            @inlinable
+            public var isOptional : Bool {
+                switch self {
+                case .optional: return true
+                default: return false
+                }
+            }
         }
     }
 }
@@ -99,8 +107,9 @@ public protocol ProtobufProtocol {
 
     init()
 
-    func protobufValue(fieldNumber: Int) -> Any?
-    mutating func setProtobufValue(fieldNumber: Int, value: Any)
+    func protobufDataType(fieldNumber: Int) -> SerializationTechnique.Protobuf.DataType
+    func protobufValue<T>(fieldNumber: Int) -> T?
+    mutating func setProtobufValue<T>(fieldNumber: Int, value: T)
 
     func serializeProtobuf(reserveCapacity: Int) -> [UInt8]
     static func deserializeProtobuf(data: [UInt8]) -> Self
@@ -112,23 +121,51 @@ extension ProtobufProtocol {
     public func serializeProtobuf(reserveCapacity: Int = 1024) -> [UInt8] {
         var data:[UInt8] = []
         data.reserveCapacity(reserveCapacity)
-        for (index, protoValue) in Self.protobufContent.enumerated() {
-            let fieldNumber:Int = index+1
-            if let value:Any = protobufValue(fieldNumber: protoValue.fieldNumber) {
-                switch protoValue.dataType {
-                case .bool:   SerializationTechnique.Protobuf.encodeBool(fieldNumber: fieldNumber, value as! Bool, into: &data)
-                case .int32:  SerializationTechnique.Protobuf.encodeInt32(fieldNumber: fieldNumber, value as! Int32, into: &data)
-                case .int64:  SerializationTechnique.Protobuf.encodeInt64(fieldNumber: fieldNumber, value as! Int64, into: &data)
-                case .string: SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, value as! String, into: &data)
-                case .uint32: SerializationTechnique.Protobuf.encodeUInt32(fieldNumber: fieldNumber, value as! UInt32, into: &data)
-                case .uint64: SerializationTechnique.Protobuf.encodeUInt64(fieldNumber: fieldNumber, value as! UInt64, into: &data)
-                default:      SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
-                }
-            } else {
-                SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .varint, into: &data)
-            }
+        for value in Self.protobufContent {
+            let fieldNumber:Int = value.fieldNumber
+            let dataType:SerializationTechnique.Protobuf.DataType = Self.protobufContent[fieldNumber-1].dataType
+            serialize(dataType: dataType, fieldNumber: fieldNumber, data: &data)
         }
         return data
+    }
+
+    @inlinable
+    func serialize(dataType: SerializationTechnique.Protobuf.DataType, fieldNumber: Int, data: inout [UInt8]) {
+        func value<T>() -> T? {
+            return protobufValue(fieldNumber: fieldNumber)
+        }
+        var dataType:SerializationTechnique.Protobuf.DataType = dataType
+        switch dataType {
+        case .optional(let dt):
+            dataType = dt
+        default:
+            break
+        }
+        switch dataType {
+        case .bool:
+            guard let v:Bool = value() else { return }
+            SerializationTechnique.Protobuf.encodeBool(fieldNumber: fieldNumber, v, into: &data)
+        case .int32:
+            guard let v:Int32 = value() else { return }
+            SerializationTechnique.Protobuf.encodeInt32(fieldNumber: fieldNumber, v, into: &data)
+        case .int64:
+            guard let v:Int64 = value() else { return }
+            SerializationTechnique.Protobuf.encodeInt64(fieldNumber: fieldNumber, v, into: &data)
+        case .string:
+            guard let v:String = value() else { return }
+            SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, v, into: &data)
+        case .uint32:
+            guard let v:UInt32 = value() else { return }
+            SerializationTechnique.Protobuf.encodeUInt32(fieldNumber: fieldNumber, v, into: &data)
+        case .uint64:
+            guard let v:UInt64 = value() else { return }
+            SerializationTechnique.Protobuf.encodeUInt64(fieldNumber: fieldNumber, v, into: &data)
+        case .structure(let _):
+            guard let v:ProtobufProtocol = value() else { return }
+            break
+        default:
+            break
+        }
     }
 }
 

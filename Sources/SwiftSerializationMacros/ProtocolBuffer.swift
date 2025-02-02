@@ -32,25 +32,30 @@ enum ProtocolBuffer : ExtensionMacro {
     ) -> String {
         var values:String = "static let protobufContent:[SerializationTechnique.Protobuf.Value] = [\n"
         var initializer:String = "init() {"
-        var getVariable:String = "func protobufValue(fieldNumber: Int) -> Any? {\nswitch fieldNumber {\n"
-        var setVariable:String = "mutating func setProtobufValue(fieldNumber: Int, value: Any) {\nswitch fieldNumber {\n"
+        var getDataType:String = "@inlinable func protobufDataType(fieldNumber: Int) -> SerializationTechnique.Protobuf.DataType {\nswitch fieldNumber {\n"
+        var getVariable:String = "@inlinable func protobufValue<T>(fieldNumber: Int) -> T? {\nswitch fieldNumber {\n"
+        var setVariable:String = "@inlinable mutating func setProtobufValue<T>(fieldNumber: Int, value: T) {\nswitch fieldNumber {\n"
         var content:[String] = []
         var fieldNumber:Int = 1
         for member in declaration.memberBlock.members {
             if let decl:VariableDeclSyntax = member.decl.as(VariableDeclSyntax.self) {
-                var name:String = "", dataType:String = ""
+                var name:String = "", dataType:String = "", isOptional:Bool = false
                 for binding in decl.bindings {
                     if let id:IdentifierPatternSyntax = binding.pattern.as(IdentifierPatternSyntax.self) {
                         name = id.identifier.text
-                        dataType = binding.typeAnnotation?.type.as(IdentifierTypeSyntax.self)?.name.text ?? ""
+                        if let annotation:TypeAnnotationSyntax = binding.typeAnnotation, binding.accessorBlock == nil {
+                            var type:TypeSyntax = annotation.type
+                            if let optional:OptionalTypeSyntax = type.as(OptionalTypeSyntax.self) {
+                                isOptional = true
+                                type = optional.wrappedType
+                            }
+                            dataType = type.as(IdentifierTypeSyntax.self)?.name.text ?? ""
+                        }
                     }
                 }
                 if !name.isEmpty && !dataType.isEmpty {
-                    let isOptional:Bool = dataType.last == "?"
-                    if isOptional {
-                        dataType.removeLast()
-                    }
-                    let defaultValue:String
+                    var dataTypeEnum:String = "\(dataType.lowercased())"
+                    var defaultValue:String
                     switch dataType {
                     case "Bool":   defaultValue = "false"
                     case "Double": defaultValue = "0.0"
@@ -60,23 +65,30 @@ enum ProtocolBuffer : ExtensionMacro {
                     case "String": defaultValue = "\"\""
                     case "UInt32": defaultValue = "0"
                     case "UInt64": defaultValue = "0"
-                    default:       continue
+                    default:       defaultValue = dataType + "()"; dataTypeEnum = "structure(\(dataType).protobufContent)"
+                    }
+                    if isOptional {
+                        defaultValue = "nil"
+                        dataTypeEnum = "optional(.\(dataTypeEnum))"
                     }
                     initializer += "\n" + name + " = " + defaultValue
-                    getVariable += "case \(fieldNumber): return " + name + "\n"
-                    setVariable += "case \(fieldNumber): " + name + " = value as! " + dataType + "\n"
-                    content.append(".init(fieldNumber: \(fieldNumber), optional: \(isOptional), dataType: .\(dataType.lowercased()))")
+                    getDataType += "case \(fieldNumber): return .\(dataTypeEnum)\n"
+                    getVariable += "case \(fieldNumber): return " + name + " as? T\n"
+                    setVariable += "case \(fieldNumber): " + name + " = value as\(isOptional ? "?" : "!") " + dataType + "\n"
+                    content.append(".init(fieldNumber: \(fieldNumber), dataType: .\(dataTypeEnum))")
                 }
                 fieldNumber += 1
             }
         }
         values += content.joined(separator: ",\n") + "\n]"
         initializer += "}"
+        getDataType += "default: return .nil\n}\n}"
         getVariable += "default: return nil\n}\n}"
         setVariable += "default: break\n}\n}"
         return [
             "\(values)",
             "\(initializer)",
+            "\(getDataType)",
             "\(getVariable)",
             "\(setVariable)"
         ].joined()

@@ -36,12 +36,21 @@ struct ProtobufExample1 : Hashable {
     var id:Int32
     var name:String
     var isTrue:Bool
+    var example2:ProtobufExample2?
     
-    init(id: Int32, name: String, isTrue: Bool) {
+    init(id: Int32, name: String, isTrue: Bool, example2: ProtobufExample2? = nil) {
         self.id = id
         self.name = name
         self.isTrue = isTrue
+        self.example2 = example2
     }
+
+    var computed : Bool { true }
+}
+
+@ProtocolBuffer
+struct ProtobufExample2: Hashable {
+    var isBig:Bool
 }
 
 #endif
