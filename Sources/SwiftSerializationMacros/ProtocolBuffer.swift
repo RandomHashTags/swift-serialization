@@ -49,23 +49,30 @@ enum ProtocolBuffer : ExtensionMacro {
                                 isOptional = true
                                 type = optional.wrappedType
                             }
-                            dataType = type.as(IdentifierTypeSyntax.self)?.name.text ?? ""
+                            if let member:MemberTypeSyntax = type.as(MemberTypeSyntax.self) {
+                                if let id:String = member.baseType.as(IdentifierTypeSyntax.self)?.name.text {
+                                    dataType = id + "." + member.name.text
+                                }
+                            } else if let id:String = type.as(IdentifierTypeSyntax.self)?.name.text {
+                                dataType = id
+                            }
                         }
                     }
                 }
                 if !name.isEmpty && !dataType.isEmpty {
-                    var dataTypeEnum:String = "\(dataType.lowercased())"
+                    var dataTypeEnum:String = "\(dataType.lowercased().split(separator: ".").last!)"
                     var defaultValue:String
                     switch dataType {
-                    case "Bool":   defaultValue = "false"
-                    case "Double": defaultValue = "0.0"
-                    case "Float":  defaultValue = "0.0"
-                    case "Int32":  defaultValue = "0"
-                    case "Int64":  defaultValue = "0"
-                    case "String": defaultValue = "\"\""
-                    case "UInt32": defaultValue = "0"
-                    case "UInt64": defaultValue = "0"
-                    default:       defaultValue = dataType + "()"; dataTypeEnum = "structure(\(dataType).protobufContent)"
+                    case "Swift.Bool", "Bool": defaultValue = "false"
+                    case "Swift.Double", "Double": defaultValue = "0.0"
+                    case "Swift.Float", "Float": defaultValue = "0.0"
+                    case "Swift.Int32", "Int32": defaultValue = "0"
+                    case "Swift.Int64", "Int64": defaultValue = "0"
+                    case "Swift.String", "String": defaultValue = "\"\""
+                    case "FoundationEssentials.UUID", "Foundation.UUID", "UUID": defaultValue = "UUID()"
+                    case "Swift.UInt32", "UInt32": defaultValue = "0"
+                    case "Swift.UInt64", "UInt64": defaultValue = "0"
+                    default: defaultValue = dataType + "()"; dataTypeEnum = "structure(\(dataType).protobufContent)"
                     }
                     if isOptional {
                         defaultValue = "nil"

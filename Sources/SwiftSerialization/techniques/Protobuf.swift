@@ -37,6 +37,12 @@ extension SerializationTechnique {
                 case .len:
                     switch dataType {
                     case .string: return decodeString(index: &index, data: data)
+                    case .uuid:
+                        #if canImport(FoundationEssentials) || canImport(Foundation)
+                        return decodeUUID(index: &index, data: data)
+                        #else
+                        return nil
+                        #endif
                     default: return nil
                     }
                 default: return nil
@@ -88,6 +94,7 @@ extension SerializationTechnique {
             case sint32
             case sint64
             case string
+            case uuid
             case structure([Value])
             case uint32
             case uint64
@@ -157,6 +164,13 @@ extension ProtobufProtocol {
         case .int64:
             guard let v:Int64 = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeInt64(fieldNumber: fieldNumber, v, into: &data)
+        case .uuid:
+            #if canImport(FoundationEssentials) || canImport(Foundation)
+            guard let v:UUID = protobufValue(fieldNumber: fieldNumber) else { return }
+            SerializationTechnique.Protobuf.encodeUUID(fieldNumber: fieldNumber, v, into: &data)
+            #else
+            break
+            #endif
         case .string:
             guard let v:String = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, v, into: &data)
@@ -229,6 +243,37 @@ extension SerializationTechnique.Protobuf {
         encodeVarInt(int: utf8.count, into: &data)
         data.append(contentsOf: utf8)
     }
+
+    @inlinable
+    static func encodeByteArray<C: Collection<UInt8>>(fieldNumber: Int, _ array: C, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .len, into: &data)
+        encodeVarInt(int: array.count, into: &data)
+        data.append(contentsOf: array)
+    }
+
+    #if canImport(FoundationEssentials) || canImport(Foundation)
+    @inlinable
+    static func encodeUUID(fieldNumber: Int, _ uuid: UUID, into data: inout [UInt8]) {
+        SerializationTechnique.Protobuf.encodeFieldTag(fieldNumber: fieldNumber, wireType: .len, into: &data)
+        encodeVarInt(int: 16, into: &data)
+        data.append(uuid.uuid.0)
+        data.append(uuid.uuid.1)
+        data.append(uuid.uuid.2)
+        data.append(uuid.uuid.3)
+        data.append(uuid.uuid.4)
+        data.append(uuid.uuid.5)
+        data.append(uuid.uuid.6)
+        data.append(uuid.uuid.7)
+        data.append(uuid.uuid.8)
+        data.append(uuid.uuid.9)
+        data.append(uuid.uuid.10)
+        data.append(uuid.uuid.11)
+        data.append(uuid.uuid.12)
+        data.append(uuid.uuid.13)
+        data.append(uuid.uuid.14)
+        data.append(uuid.uuid.15)
+    }
+    #endif
 }
 
 // MARK: Deserialize
@@ -236,6 +281,7 @@ extension ProtobufProtocol {
     public init<C: Collection<UInt8>>(protobufSerializedBytes: C) {
         self = SerializationTechnique.Protobuf.deserialize(data: protobufSerializedBytes)
     }
+
     #if canImport(FoundationEssentials) || canImport(Foundation)
     public init(protobufSerializedData: Data) {
         self = SerializationTechnique.Protobuf.deserialize(data: [UInt8](protobufSerializedData))
@@ -300,6 +346,36 @@ extension SerializationTechnique.Protobuf {
         let bytes:C.SubSequence = decodeLengthDelimited(index: &index, data: data)
         return String(decoding: bytes, as: UTF8.self)
     }
+
+    @inlinable
+    static func decodeByteArray<C: Collection<UInt8>>(index: inout C.Index, data: C) -> [UInt8] {
+        return [UInt8](decodeLengthDelimited(index: &index, data: data))
+    }
+
+    #if canImport(FoundationEssentials) || canImport(Foundation)
+    @inlinable
+    static func decodeUUID<C: Collection<UInt8>>(index: inout C.Index, data: C) -> UUID {
+        let bytes:C.SubSequence = decodeLengthDelimited(index: &index, data: data)
+        return UUID(uuid: (
+            bytes[bytes.startIndex],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 1)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 2)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 3)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 4)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 5)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 6)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 7)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 8)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 9)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 10)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 11)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 12)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 13)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 14)],
+            bytes[bytes.index(bytes.startIndex, offsetBy: 15)]
+        ))
+    }
+    #endif
 
     @inlinable
     static func decodeBool<C: Collection<UInt8>>(index: inout C.Index, data: C) -> Bool {
