@@ -25,7 +25,7 @@ struct ProtobufTests {
         #expect(data.hexadecimal() == "08091206484F4F504C411801")
         #endif
 
-        let result:ProtobufExample1 = ProtobufExample1.deserializeProtobuf(data: data)
+        let result:ProtobufExample1 = ProtobufExample1(protobufSerializedBytes: data)
         #expect(example1 == result)
         //print("protobuf;example1;serialized=\([UInt8](data))")
     }

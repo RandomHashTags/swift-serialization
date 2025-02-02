@@ -5,7 +5,9 @@
 //  Created by Evan Anderson on 12/14/24.
 //
 
-#if canImport(Foundation)
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#elseif canImport(Foundation)
 import Foundation
 #endif
 
@@ -107,12 +109,19 @@ public protocol ProtobufProtocol {
 
     init()
 
+    /// Deserialize
+    init<C: Collection<UInt8>>(protobufSerializedBytes: C)
+
+    #if canImport(FoundationEssentials) || canImport(Foundation)
+    /// Deserialize
+    init(protobufSerializedData: Data)
+    #endif
+
     func protobufDataType(fieldNumber: Int) -> SerializationTechnique.Protobuf.DataType
     func protobufValue<T>(fieldNumber: Int) -> T?
     mutating func setProtobufValue<T>(fieldNumber: Int, value: T)
 
     func serializeProtobuf(reserveCapacity: Int) -> [UInt8]
-    static func deserializeProtobuf(data: [UInt8]) -> Self
 }
 
 // MARK: Serialize
@@ -131,9 +140,6 @@ extension ProtobufProtocol {
 
     @inlinable
     func serialize(dataType: SerializationTechnique.Protobuf.DataType, fieldNumber: Int, data: inout [UInt8]) {
-        func value<T>() -> T? {
-            return protobufValue(fieldNumber: fieldNumber)
-        }
         var dataType:SerializationTechnique.Protobuf.DataType = dataType
         switch dataType {
         case .optional(let dt):
@@ -143,26 +149,26 @@ extension ProtobufProtocol {
         }
         switch dataType {
         case .bool:
-            guard let v:Bool = value() else { return }
+            guard let v:Bool = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeBool(fieldNumber: fieldNumber, v, into: &data)
         case .int32:
-            guard let v:Int32 = value() else { return }
+            guard let v:Int32 = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeInt32(fieldNumber: fieldNumber, v, into: &data)
         case .int64:
-            guard let v:Int64 = value() else { return }
+            guard let v:Int64 = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeInt64(fieldNumber: fieldNumber, v, into: &data)
         case .string:
-            guard let v:String = value() else { return }
+            guard let v:String = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, v, into: &data)
         case .uint32:
-            guard let v:UInt32 = value() else { return }
+            guard let v:UInt32 = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeUInt32(fieldNumber: fieldNumber, v, into: &data)
         case .uint64:
-            guard let v:UInt64 = value() else { return }
+            guard let v:UInt64 = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeUInt64(fieldNumber: fieldNumber, v, into: &data)
-        case .structure(let _):
-            guard let v:ProtobufProtocol = value() else { return }
-            break
+        case .structure:
+            guard let v:ProtobufProtocol = protobufValue(fieldNumber: fieldNumber) else { return }
+            data.append(contentsOf: v.serializeProtobuf())
         default:
             break
         }
@@ -227,23 +233,33 @@ extension SerializationTechnique.Protobuf {
 
 // MARK: Deserialize
 extension ProtobufProtocol {
-    public static func deserializeProtobuf<C: Collection<UInt8>>(data: C) -> Self {
-        var value:Self = Self()
+    public init<C: Collection<UInt8>>(protobufSerializedBytes: C) {
+        self = SerializationTechnique.Protobuf.deserialize(data: protobufSerializedBytes)
+    }
+    #if canImport(FoundationEssentials) || canImport(Foundation)
+    public init(protobufSerializedData: Data) {
+        self = SerializationTechnique.Protobuf.deserialize(data: [UInt8](protobufSerializedData))
+    }
+    #endif
+}
+
+extension SerializationTechnique.Protobuf {
+    @inlinable
+    public static func deserialize<C: Collection<UInt8>, T: ProtobufProtocol>(data: C) -> T {
+        var value:T = T()
         var index:C.Index = data.startIndex
         while index < data.endIndex {
             guard let (number, wireType):(Int, SerializationTechnique.Protobuf.WireType) = SerializationTechnique.Protobuf.decodeFieldTag(index: &index, data: data) else {
                 break
             }
-            let protoValue:SerializationTechnique.Protobuf.Value = protobufContent[number-1]
+            let protoValue:SerializationTechnique.Protobuf.Value = T.protobufContent[number-1]
             if let decoded:Any = wireType.decode(dataType: protoValue.dataType, index: &index, data: data) {
                 value.setProtobufValue(fieldNumber: protoValue.fieldNumber, value: decoded)
             }
         }
         return value
     }
-}
 
-extension SerializationTechnique.Protobuf {
     @inlinable
     static func decodeVarInt<C: Collection<UInt8>>(index: inout C.Index, data: C) -> UInt64 {
         var result:UInt64 = 0, shift:UInt64 = 0
