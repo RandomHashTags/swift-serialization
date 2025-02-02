@@ -6,10 +6,7 @@
 //
 
 @attached(extension, conformances: ProtobufProtocol, names: arbitrary)
-@attached(member, names: arbitrary)
-public macro ProtocolBuffer(
-    content: [String:SerializationTechnique.Protobuf.DataType]
-) = #externalMacro(module: "SwiftSerializationMacros", type: "ProtocolBuffer")
+public macro ProtocolBuffer() = #externalMacro(module: "SwiftSerializationMacros", type: "ProtocolBuffer")
 
 extension Encodable {
     @inlinable

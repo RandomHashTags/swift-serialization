@@ -31,11 +31,7 @@ struct ProtobufTests {
     }
 }
 
-@ProtocolBuffer(content: [
-    "id" : .int32,
-    "name" : .string,
-    "isTrue" : .bool
-])
+@ProtocolBuffer
 struct ProtobufExample1 : Hashable {
     var id:Int32
     var name:String
