@@ -41,6 +41,7 @@ struct ProtobufExample1 : Hashable {
     var id:Int32
     var name:String
     var isTrue:Swift.Bool
+    //var float:Float
     var example2:ProtobufExample2?
     
     init(

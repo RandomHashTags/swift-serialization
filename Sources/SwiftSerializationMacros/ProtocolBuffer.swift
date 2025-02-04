@@ -64,8 +64,8 @@ enum ProtocolBuffer : ExtensionMacro {
                     var defaultValue:String
                     switch dataType {
                     case "Swift.Bool", "Bool": defaultValue = "false"
-                    case "Swift.Double", "Double": defaultValue = "0.0"
-                    case "Swift.Float", "Float": defaultValue = "0.0"
+                    case "Swift.Double", "Double": defaultValue = "0"
+                    case "Swift.Float", "Float": defaultValue = "0"
                     case "Swift.Int32", "Int32": defaultValue = "0"
                     case "Swift.Int64", "Int64": defaultValue = "0"
                     case "Swift.String", "String": defaultValue = "\"\""
