@@ -42,6 +42,7 @@ struct ProtobufExample1 : Hashable {
     var name:String
     var isTrue:Swift.Bool
     //var float:Float
+    //var url:URL = URL(string: "https://litleagues.com")!
     var example2:ProtobufExample2?
     
     init(

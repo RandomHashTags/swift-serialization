@@ -51,6 +51,13 @@ extension SerializationTechnique {
                 case .len:
                     switch dataType {
                     case .string: return decodeString(index: &index, data: data)
+                    case .url:
+                        #if canImport(FoundationEssentials) || canImport(Foundation)
+                        let string:String = decodeString(index: &index, data: data)
+                        return URL(string: string)
+                        #else
+                        return nil
+                        #endif
                     case .uuid:
                         #if canImport(FoundationEssentials) || canImport(Foundation)
                         return decodeUUID(index: &index, data: data)
@@ -108,6 +115,7 @@ extension SerializationTechnique {
             case sint32
             case sint64
             case string
+            case url
             case uuid
             case structure([Value])
             case uint32
@@ -184,13 +192,18 @@ extension ProtobufProtocol {
         case .float:
             guard let v:Float = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeI32(fieldNumber: fieldNumber, v, into: &data)
+        case .url:
+            #if canImport(FoundationEssentials) || canImport(Foundation)
+            guard let v:URL = protobufValue(fieldNumber: fieldNumber) else { return }
+            SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, v.absoluteString, into: &data)
+            #endif
+            break
         case .uuid:
             #if canImport(FoundationEssentials) || canImport(Foundation)
             guard let v:UUID = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeUUID(fieldNumber: fieldNumber, v, into: &data)
-            #else
-            break
             #endif
+            break
         case .string:
             guard let v:String = protobufValue(fieldNumber: fieldNumber) else { return }
             SerializationTechnique.Protobuf.encodeString(fieldNumber: fieldNumber, v, into: &data)
