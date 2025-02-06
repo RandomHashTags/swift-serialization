@@ -33,8 +33,8 @@ enum ProtocolBuffer : ExtensionMacro {
         var values:String = "static let protobufContent:[SerializationTechnique.Protobuf.Value] = [\n"
         var initializer:String = "init() {"
         var getDataType:String = "@inlinable func protobufDataType(fieldNumber: Int) -> SerializationTechnique.Protobuf.DataType {\nswitch fieldNumber {\n"
-        var getVariable:String = "@inlinable func protobufValue<T>(fieldNumber: Int) -> T? {\nswitch fieldNumber {\n"
-        var setVariable:String = "@inlinable mutating func setProtobufValue<T>(fieldNumber: Int, value: T) {\nswitch fieldNumber {\n"
+        var getVariable:String = "func protobufValue<T>(fieldNumber: Int) -> T? {\nswitch fieldNumber {\n"
+        var setVariable:String = "mutating func setProtobufValue<T>(fieldNumber: Int, value: T) {\nswitch fieldNumber {\n"
         var content:[String] = []
         var fieldNumber:Int = 1
         loop: for member in declaration.memberBlock.members {
