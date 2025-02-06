@@ -20,21 +20,32 @@ enum ProtocolBuffer : ExtensionMacro {
         guard let structure:String = declaration.as(StructDeclSyntax.self)?.name.text else {
             return []
         }
+        var visibility:String = ""
+        for modifier in declaration.modifiers {
+            switch modifier.name.text {
+            case "public", "package":
+                visibility = modifier.name.text + " "
+                break
+            default:
+                break
+            }
+        }
         return [
             try! ExtensionDeclSyntax("extension \(raw: structure) : \(raw: protocols)", membersBuilder: {
-                MemberBlockItemListSyntax(stringLiteral: block(declaration: declaration))
+                MemberBlockItemListSyntax(stringLiteral: block(visibility: visibility, declaration: declaration))
             })
         ]
     }
 
     static func block(
+        visibility: String,
         declaration: some DeclGroupSyntax
     ) -> String {
-        var values:String = "static let protobufContent:[SerializationTechnique.Protobuf.Value] = [\n"
-        var initializer:String = "init() {"
-        var getDataType:String = "@inlinable func protobufDataType(fieldNumber: Int) -> SerializationTechnique.Protobuf.DataType {\nswitch fieldNumber {\n"
-        var getVariable:String = "func protobufValue<T>(fieldNumber: Int) -> T? {\nswitch fieldNumber {\n"
-        var setVariable:String = "mutating func setProtobufValue<T>(fieldNumber: Int, value: T) {\nswitch fieldNumber {\n"
+        var values:String = visibility + "static let protobufContent:[SerializationTechnique.Protobuf.Value] = ["
+        var initializer:String = visibility + "init() {"
+        var getDataType:String = "@inlinable " + visibility + "func protobufDataType(fieldNumber: Int) -> SerializationTechnique.Protobuf.DataType {\nswitch fieldNumber {\n"
+        var getVariable:String = visibility + "func protobufValue<T>(fieldNumber: Int) -> T? {\nswitch fieldNumber {\n"
+        var setVariable:String = visibility + "mutating func setProtobufValue<T>(fieldNumber: Int, value: T) {\nswitch fieldNumber {\n"
         var content:[String] = []
         var fieldNumber:Int = 1
         loop: for member in declaration.memberBlock.members {
@@ -95,7 +106,7 @@ enum ProtocolBuffer : ExtensionMacro {
                 fieldNumber += 1
             }
         }
-        values += content.joined(separator: ",\n") + "\n]"
+        values += content.isEmpty ? "]" : "\n" + content.joined(separator: ",\n") + "\n]"
         initializer += "}"
         getDataType += "default: return .nil\n}\n}"
         getVariable += "default: return nil\n}\n}"

@@ -62,6 +62,11 @@ struct ProtobufExample1 : Hashable {
     var computed : Bool { true }
 }
 
+@ProtocolBuffer
+public struct PublicProtobuf {
+    var int:UInt8
+}
+
 #if canImport(FoundationEssentials) || canImport(Foundation)
 @ProtocolBuffer
 struct ProtobufExample2 : Hashable {
