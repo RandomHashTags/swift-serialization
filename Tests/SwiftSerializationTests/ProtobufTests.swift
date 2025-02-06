@@ -38,6 +38,8 @@ struct ProtobufTests {
 
 @ProtocolBuffer
 struct ProtobufExample1 : Hashable {
+    static let bro:String = ""
+    
     var id:Int32
     var name:String
     var isTrue:Swift.Bool

@@ -37,8 +37,14 @@ enum ProtocolBuffer : ExtensionMacro {
         var setVariable:String = "@inlinable mutating func setProtobufValue<T>(fieldNumber: Int, value: T) {\nswitch fieldNumber {\n"
         var content:[String] = []
         var fieldNumber:Int = 1
-        for member in declaration.memberBlock.members {
+        loop: for member in declaration.memberBlock.members {
             if let decl:VariableDeclSyntax = member.decl.as(VariableDeclSyntax.self) {
+                for modifier in decl.modifiers {
+                    if modifier.name.text == "static" {
+                        continue loop
+                    }
+                }
+
                 var name:String = "", dataType:String = "", isOptional:Bool = false
                 for binding in decl.bindings {
                     if let id:IdentifierPatternSyntax = binding.pattern.as(IdentifierPatternSyntax.self) {
