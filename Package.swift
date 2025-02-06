@@ -35,9 +35,23 @@ let package = Package(
         ),
 
         .target(
+            name: "SwiftSerializationUtilities"
+        ),
+
+        .target(
+            name: "ProtocolBuffers",
+            dependencies: [
+                "SwiftSerializationMacros",
+                "SwiftSerializationUtilities"
+            ]
+        ),
+
+        .target(
             name: "SwiftSerialization",
             dependencies: [
-                "SwiftSerializationMacros"
+                "SwiftSerializationMacros",
+                "SwiftSerializationUtilities",
+                "ProtocolBuffers"
             ]
         ),
         .testTarget(
