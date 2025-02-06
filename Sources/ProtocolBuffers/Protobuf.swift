@@ -21,7 +21,7 @@ extension SerializationTechnique {
 
 // MARK: WireType
 extension SerializationTechnique.Protobuf {
-    public enum WireType : Int {
+    public enum WireType : Int, Sendable {
         case varint
         case i64
         case len
@@ -101,7 +101,7 @@ extension SerializationTechnique.Protobuf {
 
 // MARK: Value
 extension SerializationTechnique.Protobuf {
-    public struct Value {
+    public struct Value : Sendable {
         public let fieldNumber:Int
         public let dataType:DataType
 
@@ -114,7 +114,7 @@ extension SerializationTechnique.Protobuf {
 
 // MARK: DataType
 extension SerializationTechnique.Protobuf {
-    public enum DataType {
+    public enum DataType : Sendable {
         case `nil`
         case bool
         case bytes
