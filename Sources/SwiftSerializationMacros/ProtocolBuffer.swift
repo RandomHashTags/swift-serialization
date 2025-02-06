@@ -79,6 +79,7 @@ enum ProtocolBuffer : ExtensionMacro {
                     case "FoundationEssentials.URL", "Foundation.URL", "URL": defaultValue = "URL(string: \"https://google.com\")!"
                     case "Swift.UInt32", "UInt32": defaultValue = "0"
                     case "Swift.UInt64", "UInt64": defaultValue = "0"
+                    case "Swift.UInt8", "UInt8": defaultValue = "0"
                     default: defaultValue = dataType + "()"; dataTypeEnum = "structure(\(dataType).protobufContent)"
                     }
                     if isOptional {

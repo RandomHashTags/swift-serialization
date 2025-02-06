@@ -76,6 +76,7 @@ extension SerializationTechnique.Protobuf {
                 }
             case .byte:
                 switch dataType {
+                case .uint8: return decodeUInt8(index: &index, data: data)
                 default: return nil
                 }
             default: return nil
@@ -91,6 +92,7 @@ extension SerializationTechnique.Protobuf {
                 let length:Int = Int(decodeVarInt(index: &index, data: data))
                 index += length
             case .i32:    index += 4
+            case .byte:   index += 1
             default: break
             }
         }

@@ -144,6 +144,7 @@ extension SerializationTechnique.Protobuf {
 
     @inlinable
     static func decodeUInt8<C: Collection<UInt8>>(index: inout C.Index, data: C) -> UInt8 {
+        defer { data.formIndex(after: &index) }
         return data[index]
     }
 }
